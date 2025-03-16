@@ -1,12 +1,53 @@
 use rayon::prelude::*;
-use std::collections::HashSet;
+use std::{collections::HashSet, io, process};
 
 fn main() {
-    let primes = collect_primes(100);
+    let inp = read_input();
+    let input = parse_input(inp);
+    let primes = collect_primes(input.0, input.1);
     let factors: HashSet<(u64, u64, u64)> = factorize(primes);
-    println!("{:?}", factors);
-    println!("{:?}", factors.len());
     // TODO sort factors (glidesort?)
+
+    println!("{:?}", factors.len());
+
+    // TODO bottleneck -> use BufWriter
+    // for factor in factors {
+    //     println!("{:?}", factor);
+    // }
+}
+
+fn read_input() -> String {
+    println!("Enter range [u64 u64]:");
+
+    let mut inp = String::new();
+    io::stdin()
+        .read_line(&mut inp)
+        .expect("Unable to read input");
+
+    inp.trim().to_string()
+}
+
+fn parse_input(input: String) -> (u64, u64) {
+    // split input to format (u64, u64)
+    let split_input: Vec<&str> = input.split_whitespace().collect();
+
+    if split_input.len() != 2 {
+        eprintln!("2 inputs needed: 'start' and 'end'");
+        process::exit(1);
+    }
+
+    let parsed_input: Vec<u64> = split_input
+        .iter()
+        .map(|i| {
+            i.parse::<u64>().unwrap_or_else(|err| {
+                eprintln!("{err}");
+                process::exit(1);
+            })
+        })
+        .collect();
+
+    let tuple_input = (parsed_input[0], parsed_input[1]);
+    tuple_input
 }
 
 trait Prime {
@@ -44,9 +85,12 @@ impl Prime for u64 {
     }
 }
 
-fn collect_primes(range: u64) -> Vec<u64> {
+fn collect_primes(start: u64, end: u64) -> Vec<u64> {
     // filter out non prime numbers
-    (0..=range).into_par_iter().filter(|&n| n.prime()).collect()
+    (start..=end)
+        .into_par_iter()
+        .filter(|&n| n.prime())
+        .collect()
 }
 
 fn factorize(primes: Vec<u64>) -> HashSet<(u64, u64, u64)> {
@@ -100,7 +144,7 @@ mod tests {
             89, 97,
         ];
 
-        assert_eq!(Vec::from(primes), collect_primes(100));
+        assert_eq!(Vec::from(primes), collect_primes(0, 100));
     }
 
     #[test]
