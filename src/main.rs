@@ -6,6 +6,7 @@ fn main() {
     let factors: HashSet<(u64, u64, u64)> = factorize(primes);
     println!("{:?}", factors);
     println!("{:?}", factors.len());
+    // TODO sort factors (glidesort?)
 }
 
 trait Prime {
@@ -15,6 +16,7 @@ trait Prime {
 impl Prime for u64 {
     // check if number is prime
     fn prime(self) -> bool {
+        // base cases
         if self < 2 {
             return false;
         }
@@ -25,39 +27,47 @@ impl Prime for u64 {
             return false;
         }
 
+        // if a number n is not prime, it must have at least one pair of factors:
+        // n=a×b, where a and b are factors of n
+        // if both a and b were greater than √n, their product would be greater than n, which is a contradiction
+        // so, at least one of the factors must be ≤ √n
+        // if we don’t find any factors up to √n, there can’t be any beyond it (since they would be paired with a factor already checked)
+        // checking all numbers up to n-1, is O(n) time complexity
+        // stopping at √n reduces it to O(√n)
         let limit = (self as f64).sqrt() as u64;
 
-        // Convert range to a Vec<u64> before using parallel iteration
-        let divisors: Vec<u64> = (5..=limit).step_by(6).collect();
-
-        divisors
+        (5..=limit)
+            .step_by(6) // all primes >3 are of the form 6k ± 1
+            .collect::<Vec<u64>>()
             .par_iter()
             .all(|&i| self % i != 0 && self % (i + 2) != 0)
     }
 }
 
 fn collect_primes(range: u64) -> Vec<u64> {
+    // filter out non prime numbers
     (0..=range).into_par_iter().filter(|&n| n.prime()).collect()
 }
 
 fn factorize(primes: Vec<u64>) -> HashSet<(u64, u64, u64)> {
+    // calculate all prime factors
     primes
         .par_iter()
         .flat_map(|&num1| {
             primes
                 .par_iter()
                 .filter_map(|&num2| {
-                    // INFO only store (a * b, min(a, b), max(a, b)) to avoid redundant pairs like (2,3,6) and (3,2,6)
-                    // INFO this ensures each unique pair appears only once.
+                    // only store (a * b, min(a, b), max(a, b)) to avoid redundant pairs like (6,2,3) and (6,3,2)
+                    // this ensures each unique pair appears only once.
                     if num1 < num2 {
                         Some((num1 * num2, num1, num2))
                     } else {
                         None
                     }
                 })
-                .collect::<Vec<_>>() // Collect each inner iteration as a Vec
+                .collect::<Vec<_>>()
         })
-        .collect() // Collect everything into the final Vec
+        .collect()
 }
 
 #[cfg(test)]
