@@ -1,3 +1,4 @@
+// TODO optimize memory usage
 use rayon::prelude::*;
 use std::{collections::HashSet, io, process};
 
